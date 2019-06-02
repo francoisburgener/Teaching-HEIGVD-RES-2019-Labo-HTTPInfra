@@ -91,3 +91,62 @@ Si l'on va sur le navigateur a l'adressse **192.168.99.199:9091** nous devrions 
 
 ## Etape 3 - Reverse proxy (statique) 
 
+Pour l'instant nous allons hardcodé les adresse IP de nos deux container dans le fichier de config du reverse proxy se qui n'est pas une bonne idée. Mais dans l'étape 5 nous alors faire un reverse proxy dynamic nous allons donc créer les deux fichier de config. un pour le default.
+
+**000-default.conf**
+
+```conf
+<VirtualHost *:80>
+</VirtualHost>
+```
+
+**001-reverse-proxy.conf**
+
+```
+<VirtualHost *:80>
+    ServerName demo.res.ch
+
+    ProxyPass "/api/addresses/" "http://172.17.0.3:3000/"
+    ProxyPassReverse "/api/addresses/" "http://172.17.0.3:3000/"
+    
+    ProxyPass "/" "http://172.17.0.2:80/"
+    ProxyPassReverse "/" "http://172.17.0.2:80/"
+</VirtualHost>
+```
+
+Ensuite il suffis de de copier nos deux fichier de config sur notre container qui nous servira de reverse proxy
+
+**Dockerfile**
+
+```dockerfile
+FROM php:5-6-apache
+
+COPY conf/ /etc/apache2
+
+RUN a2enmod proxy proxy_http
+RUN a2ensite 000-* 001-*
+```
+
+Il faut maintenant créer l'image :
+
+```
+docker build -t res/apache_rp
+```
+
+Maintenant il faut relancer les container dans cette ordre pour avoir les bonne adresse IP car nous les avons hardcodé dans notre reverse proxy
+
+```
+docker run --name apache_static -d res/apache_php
+docker run --name express_dynamic -d res/express_adresses
+docker run -p 8080:80 --name apache_rp -d res/apache_rp
+```
+
+Comme notre reverse proxy nous demande comme hostname : **demo.res.ch** il n'est plus possible pour nous d'y aller via l'adresse IP **192.168.99.100:8080**. Il faut donc aller modifier notre fichier hosts. Sur windows le fichier hosts se trouve en **C:\Windows\System32\drivers\etc**
+
+Il faudra rajouter la ligne suivant :
+
+```
+192.168.99.100 demo.res.ch
+```
+
+Dans le navitateur on peut maintenant utiliser http://demo.res.ch:8080 pour accéder au serveur apache et http://demo.res.ch:8080/api/adresses/ pour notre application javascript générant les adresses aléatoires.
