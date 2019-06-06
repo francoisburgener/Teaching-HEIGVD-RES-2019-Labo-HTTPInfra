@@ -302,3 +302,11 @@ Une fois cette commande faite vous pourrez retourner sur le site via l'adresse  
 
 ## Bonus gestion par interface graphique (UI) 
 
+Pour cette partie nous avons décidéd'utiliser l'outil [Portainer](https://portainer.io/index.html), qui permet de gérer simplement et rapidement nos conteneurs et images docker via une interface web.
+
+```
+docker volume create portainer_data
+docker run -d -p 9000:9000 -v portainer_data:/data portainer/portainer
+```
+
+Une fois ces commandes saisies, il suffit d'accéder à l'adresse de docker, sur le port 9000, pour commencer à gérer nos conteneurs.
