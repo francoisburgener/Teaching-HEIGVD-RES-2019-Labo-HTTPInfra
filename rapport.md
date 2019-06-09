@@ -415,8 +415,7 @@ On doit ajouter le Cookie dans  le headers:
 </VirtualHost>
 ```
 
-Ne pas oublier de spécifier la routeID que le cookie aura côté client: (Connaitre le chemin emprunté par un
-client n'a de sens que du côté dynamique):
+Ne pas oublier de spécifier la routeID que le cookie aura côté client:
 ```
     <Proxy "balancer://dynamic-cluster">
         BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/' route=1
@@ -433,6 +432,8 @@ Enfin spécifier au load-balancer le nom de son cookie:
 		ProxySet stickysession=ROUTEID
     </Proxy>
 ```
+
+Faire de même dans le proxy static
 
 #### Commandes à executer:
 

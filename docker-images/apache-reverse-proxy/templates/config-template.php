@@ -27,8 +27,9 @@
     ProxyPassReverse "/api/adresses/" "balancer://dynamic-cluster/"
 	
 	<Proxy "balancer://static-cluster">
-        BalancerMember 'http://<?php print "$STATIC_APP_A"?>/'
-        BalancerMember 'http://<?php print "$STATIC_APP_B"?>/'
+        BalancerMember 'http://<?php print "$STATIC_APP_A"?>/' route=3
+        BalancerMember 'http://<?php print "$STATIC_APP_B"?>/' route=4
+		ProxySet stickysession=ROUTEID
     </Proxy>
     
     ProxyPass "/" "balancer://static-cluster/"
