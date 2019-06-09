@@ -300,6 +300,101 @@ docker run -d -e STATIC_APP=172.17.0.2:80 -e DYNAMIC_APP=172.17.0.3:3000 -p 8080
 
 Une fois cette commande faite vous pourrez retourner sur le site via l'adresse  http://demo.res.ch:8080 et voir le site avec notre script ajax tourné. De plus a l'adresse  http://demo.res.ch:8080/api/adresses/ vous pourrez récuperer les valeur gérerer par notre api
 
+## Bonus Load balancing: multiple server nodes
+
+Sources: https://poweruphosting.com/blog/apache-reverse-proxy/ https://stackoverflow.com/questions/13094825/apache-load-balance
+La source https://httpd.apache.org/docs/2.4/fr/mod/mod_proxy_balancer.html nous a été la plus utile
+
+Tout d'abord, il faut éditer le Dockerfile du point précédent pour y ajouter
+
+```
+RUN a2enmod proxy proxy_http lbmethod_byrequests proxy_balancer
+```
+
+Ces modules permettent le load-balancing ainsi que de spécifier le load-balancing par rapport à une requête.
+
+Comme précédemment, éditer le fichier **config-template.php**
+
+```
+<?php
+// on en met une de chaque pour montrer le load-balancing
+	$DYNAMIC_APP_A = getenv('DYNAMIC_APP_A');
+	$DYNAMIC_APP_B = getenv('DYNAMIC_APP_B');
+	$STATIC_APP_A = getenv('STATIC_APP_A');
+	$STATIC_APP_B = getenv('STATIC_APP_B');
+
+?>
+
+<VirtualHost *:80>
+    ServerName demo.res.ch
+	
+	<Location "/balancer-manager">
+		SetHandler balancer-manager
+		//Require host example.com pas besoin ici
+	</Location>
+
+    <Proxy "balancer://dynamic-cluster">
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/'
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_B"?>/'
+    </Proxy>
+	
+    ProxyPass "/api/adresses/" "balancer://dynamic-cluster/"
+    ProxyPassReverse "/api/adresses/" "balancer://dynamic-cluster/"
+	
+	<Proxy "balancer://static-cluster">
+        BalancerMember 'http://<?php print "$STATIC_APP_A"?>/'
+        BalancerMember 'http://<?php print "$STATIC_APP_B"?>/'
+    </Proxy>
+    
+    ProxyPass "/" "balancer://static-cluster/"
+    ProxyPassReverse "/" "balancer://static-cluster/"
+</VirtualHost>
+```
+
+#### Commandes à executer:
+
+
+Tout d'abord kill toutes les images
+
+```
+docker kill $(docker ps -qa)
+docker rm $(docker ps -qa)
+```
+
+Puis tout reconstruire
+
+```
+docker build -t res/apache-php ./docker-images/apache-php-image/
+docker build -t res/express-adresses ./docker-images/express-image/
+docker build -t res/apache_rp ./docker-images/apache-reverse-proxy/
+```
+
+Puis effectuer ces commandes:
+
+```
+docker run -d --name apache_static_a res/apache_php
+docker run -d --name apache_static_b res/apache_php
+docker run -d --name express_adresses_dynamic_a res/express_adresses
+docker run -d --name express_adresses_dynamic_b res/express_adresses
+```
+
+Récupérer les adresses avec les  commandes suivantes:
+
+```
+docker inspect apache_static_a | grep -i ipaddr
+docker inspect apache_static_b | grep -i ipaddr
+docker inspect express_adresses_dynamic_a | grep -i ipaddr
+docker inspect express_adresses_dynamic_b | grep -i ipaddr
+```
+
+Une fois ces adresses récupérées,  lancer la commande en entrant les adresses qu'on a trouvées dans les champs correspondants:
+
+```
+docker run -d -e STATIC_APP_A=IP1:80 -e STATIC_APP_A=IP2:80 -e DYNAMIC_APP=IP3:3000 -e DYNAMIC_APP=IP4:3000 -p 8080:80 --name apache_rp res/apache_rp
+```
+
+Enfin vous trouverez le résultat de ces opérations à l'adresse http://demo.res.ch:8080/balancer-manager
+
 ## Bonus gestion par interface graphique (UI) 
 
 Pour cette partie nous avons décidéd'utiliser l'outil [Portainer](https://portainer.io/index.html), qui permet de gérer simplement et rapidement nos conteneurs et images docker via une interface web.
