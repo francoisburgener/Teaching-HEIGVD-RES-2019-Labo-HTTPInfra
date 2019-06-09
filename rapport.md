@@ -405,6 +405,39 @@ Tout d'abord, il faut éditer le Dockerfile du point précédent pour y ajouter
 RUN a2enmod proxy proxy_http lbmethod_byrequests proxy_balancer headers
 ```
 
+On doit ajouter le Cookie dans  le headers:
+
+```
+<VirtualHost *:80>
+    (...)
+    Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
+    (...)
+</VirtualHost>
+```
+
+Ne pas oublier de spécifier la routeID que le cookie aura côté client: (Connaitre le chemin emprunté par un
+client n'a de sens que du côté dynamique):
+```
+    <Proxy "balancer://dynamic-cluster">
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/' route=1
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_B"?>/' route=2
+    </Proxy>
+```
+
+Enfin spécifier au load-balancer le nom de son cookie:
+
+```
+    <Proxy "balancer://dynamic-cluster">
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/' route=1
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_B"?>/' route=2
+		ProxySet stickysession=ROUTEID
+    </Proxy>
+```
+
+#### Commandes à executer:
+
+Enfin, en executant les mêmes commandes que dans le Bonus précédent, on peut s'apercevoir du résultat.
+
 ## Bonus gestion par interface graphique (UI) 
 
 Pour cette partie nous avons décidéd'utiliser l'outil [Portainer](https://portainer.io/index.html), qui permet de gérer simplement et rapidement nos conteneurs et images docker via une interface web.

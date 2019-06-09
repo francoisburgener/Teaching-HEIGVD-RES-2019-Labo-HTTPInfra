@@ -10,14 +10,17 @@
 <VirtualHost *:80>
     ServerName demo.res.ch
 	
+	Header add Set-Cookie "ROUTEID=.%{BALANCER_WORKER_ROUTE}e; path=/" env=BALANCER_ROUTE_CHANGED
+	
 	<Location "/balancer-manager">
 		SetHandler balancer-manager
 		//Require host example.com pas besoin ici
 	</Location>
 
     <Proxy "balancer://dynamic-cluster">
-        BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/'
-        BalancerMember 'http://<?php print "$DYNAMIC_APP_B"?>/'
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_A"?>/' route=1
+        BalancerMember 'http://<?php print "$DYNAMIC_APP_B"?>/' route=2
+		ProxySet stickysession=ROUTEID
     </Proxy>
 	
     ProxyPass "/api/adresses/" "balancer://dynamic-cluster/"
