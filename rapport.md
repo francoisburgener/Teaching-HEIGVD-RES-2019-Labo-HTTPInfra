@@ -395,6 +395,16 @@ docker run -d -e STATIC_APP_A=IP1:80 -e STATIC_APP_A=IP2:80 -e DYNAMIC_APP=IP3:3
 
 Enfin vous trouverez le résultat de ces opérations à l'adresse http://demo.res.ch:8080/balancer-manager
 
+## Bonus Load balancing: round-robin vs sticky sessions
+
+Sources: https://httpd.apache.org/docs/2.4/fr/mod/mod_proxy_balancer.html et http://docs.motechproject.org/en/latest/deployment/sticky_session_apache.html
+
+Tout d'abord, il faut éditer le Dockerfile du point précédent pour y ajouter
+
+```
+RUN a2enmod proxy proxy_http lbmethod_byrequests proxy_balancer headers
+```
+
 ## Bonus gestion par interface graphique (UI) 
 
 Pour cette partie nous avons décidéd'utiliser l'outil [Portainer](https://portainer.io/index.html), qui permet de gérer simplement et rapidement nos conteneurs et images docker via une interface web.
